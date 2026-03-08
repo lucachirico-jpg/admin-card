@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scheda Cliente - Admin</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --cgc-yellow: #fdd835;
+            --bg-black: #000000;
+            --card-bg: #111111;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-black);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            padding: 20px 0;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 10px;
+        }
+
+        /* TABELLA SCHEDA CLIENTE */
+        .customer-card {
+            width: 90%;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border: 2px solid var(--cgc-yellow);
+            border-radius: 30px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(253, 216, 53, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Lato Sinistro: Dati */
+        .info-table {
+            flex: 1;
+            border-collapse: collapse;
+        }
+
+        .info-row {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .label {
+            color: #666;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        .value {
+            color: white;
+            font-size: 15px;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        /* Lato Destro: QR Code */
+        .qr-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 110px;
+        }
+
+        #qrcode-static {
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .tessera-label {
+            color: var(--cgc-yellow);
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        /* TASTO INDIETRO */
+        .back-btn {
+            display: block;
+            width: fit-content;
+            margin: 25px auto;
+            color: #555;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border: 1px solid #333;
+            padding: 10px 20px;
+            border-radius: 50px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="customer-card" id="main-card">
+        <div class="info-table">
+            <div class="info-row">
+                <span class="label">Nome</span>
+                <span class="value" id="val-nome">Caricamento...</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Cognome</span>
+                <span class="value" id="val-cognome">Caricamento...</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Data di Nascita</span>
+                <span class="value" id="val-nascita">---</span>
+            </div>
+            <div class="info-row" style="margin-bottom: 0;">
+                <span class="label">Email</span>
+                <span class="value" id="val-email">---</span>
+            </div>
+        </div>
+
+        <div class="qr-side">
+            <div id="qrcode-static"></div>
+            <span class="tessera-label" id="val-tessera">#0000</span>
+        </div>
+    </div>
+
+    <a href="admin.html" class="back-btn">Indietro al Pannello</a>
+</div>
+
+<script>
+    // Configurazione Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyCOQzqZrGbyVsQLyiF6d9C_ZkTkKPo6rew",
+        authDomain: "tesserafedelta-afe51.firebaseapp.com",
+        databaseURL: "https://tesserafedelta-afe51-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "tesserafedelta-afe51",
+        storageBucket: "tesserafedelta-afe51.firebasestorage.app",
+        messagingSenderId: "277445209812",
+        appId: "1:277445209812:web:d0e4207692ba09973fd541"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const database = firebase.database();
+
+    // 1. Recupera ID dall'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const clienteId = urlParams.get('id');
+
+    if (clienteId) {
+        caricaDati(clienteId);
+    } else {
+        alert("Nessun cliente specificato.");
+    }
+
+    function caricaDati(uid) {
+        database.ref('utenti/' + uid).once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                const user = snapshot.val();
+                
+                // Popola i testi
+                document.getElementById('val-nome').innerText = user.nome || "N/A";
+                document.getElementById('val-cognome').innerText = user.cognome || "N/A";
+                document.getElementById('val-nascita').innerText = user.nascita || "---";
+                document.getElementById('val-email').innerText = user.email || "---";
+                document.getElementById('val-tessera').innerText = "#" + uid.substring(0, 6).toUpperCase();
+
+                // Genera QR Code (statico, solo testo ID)
+                new QRCode(document.getElementById("qrcode-static"), {
+                    text: uid,
+                    width: 80,
+                    height: 80,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            } else {
+                document.getElementById('main-card').innerHTML = "<p style='text-align:center'>Cliente non trovato.</p>";
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
