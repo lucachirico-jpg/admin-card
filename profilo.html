@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Il tuo profilo</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root { --cgc-yellow: #fdd835; --cgc-green: #2e7d32; --bg-black: #000; }
+        body { margin: 0; background: var(--bg-black); font-family: 'Segoe UI', sans-serif; color: white; }
+        .app-container { width: 100%; max-width: 450px; margin: 0 auto; padding-bottom: 50px; }
+        
+        .section-title { 
+            color: var(--cgc-yellow); 
+            font-size: 12px; 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            margin: 20px 15px 10px;
+            letter-spacing: 1px;
+        }
+
+        .card { background: #111; border: 1px solid #222; border-radius: 15px; padding: 15px; margin: 0 15px 15px; }
+
+        /* Stile Buoni Attivi */
+        .coupon-active { border-left: 4px solid var(--cgc-green); display: flex; justify-content: space-between; align-items: center; }
+        .valore-testo { font-size: 18px; font-weight: 900; color: white; }
+        .date-info { font-size: 11px; color: #888; margin-top: 4px; }
+        .scadenza-rossa { color: #ff5252; font-weight: bold; }
+
+        /* Stile Buoni Riscattati */
+        .coupon-used { opacity: 0.6; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; padding-bottom: 10px; margin-bottom: 10px; }
+        .coupon-used:last-child { border-bottom: none; }
+        .valore-used { font-size: 14px; text-decoration: line-through; color: #666; }
+        
+        .empty-msg { text-align: center; color: #444; font-size: 12px; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="section-title">Buoni Disponibili</div>
+    <div id="lista-attivi"></div>
+
+    <div class="section-title">Storico Buoni Riscattati</div>
+    <div class="card" id="lista-riscattati"></div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCOQzqZrGbyVsQLyiF6d9C_ZkTkKPo6rew",
+        authDomain: "tesserafedelta-afe51.firebaseapp.com",
+        databaseURL: "https://tesserafedelta-afe51-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "tesserafedelta-afe51",
+        storageBucket: "tesserafedelta-afe51.firebasestorage.app",
+        messagingSenderId: "277445209812",
+        appId: "1:277445209812:web:d0e4207692ba09973fd541"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const userUID = localStorage.getItem('userUID') || "user_003";
+
+    database.ref('utenti/' + userUID + '/buoni').on('value', (snapshot) => {
+        const buoniData = snapshot.val();
+        const containerAttivi = document.getElementById('lista-attivi');
+        const containerRiscattati = document.getElementById('lista-riscattati');
+        
+        containerAttivi.innerHTML = "";
+        containerRiscattati.innerHTML = "";
+
+        if (!buoniData) {
+            containerAttivi.innerHTML = '<div class="empty-msg">Nessun buono disponibile.</div>';
+            containerRiscattati.innerHTML = '<div class="empty-msg">Nessuno storico presente.</div>';
+            return;
+        }
+
+        // Trasformiamo l'oggetto in Array per poter ordinare
+        let arrayBuoni = Object.keys(buoniData).map(id => ({
+            id: id,
+            ...buoniData[id]
+        }));
+
+        // --- 1. GESTIONE BUONI ATTIVI (Dal più vecchio al più recente) ---
+        let attivi = arrayBuoni
+            .filter(b => b.stato && b.stato.toLowerCase().trim() === "attivo")
+            .sort((a, b) => new Date(a.data_emissione) - new Date(b.data_emissione));
+
+        if (attivi.length > 0) {
+            attivi.forEach(b => {
+                // Calcolo scadenza (Data emissione + 1 anno)
+                let emissione = new Date(b.data_emissione);
+                let scadenza = new Date(emissione);
+                scadenza.setFullYear(scadenza.getFullYear() + 1);
+                let dataScadenzaStr = scadenza.toLocaleDateString('it-IT');
+
+                containerAttivi.innerHTML += `
+                    <div class="card coupon-active">
+                        <div>
+                            <div class="valore-testo">BUONO DA ${b.valore}</div>
+                            <div class="date-info">Emesso: ${b.data_emissione}</div>
+                            <div class="date-info scadenza-rossa">Scadenza: ${dataScadenzaStr}</div>
+                        </div>
+                        <div style="font-size: 20px;">🎫</div>
+                    </div>`;
+            });
+        } else {
+            containerAttivi.innerHTML = '<div class="empty-msg">Nessun buono attivo trovato.</div>';
+        }
+
+        // --- 2. GESTIONE BUONI RISCATTATI (Dal più recente al più vecchio) ---
+        let riscattati = arrayBuoni
+            .filter(b => b.stato && b.stato.toLowerCase().trim() === "riscattato")
+            .sort((a, b) => new Date(b.data_utilizzo) - new Date(a.data_utilizzo));
+
+        if (riscattati.length > 0) {
+            riscattati.forEach(b => {
+                containerRiscattati.innerHTML += `
+                    <div class="coupon-used">
+                        <div>
+                            <div class="valore-used">BUONO DA ${b.valore}</div>
+                            <small style="color:#555;">Riscatto: ${b.data_utilizzo || '---'}</small>
+                        </div>
+                        <span style="color:#444; font-size:9px; font-weight:bold; border:1px solid #222; padding:2px 4px; border-radius:4px;">USATO</span>
+                    </div>`;
+            });
+        } else {
+            containerRiscattati.innerHTML = '<div class="empty-msg">Nessun buono utilizzato.</div>';
+        }
+    });
+</script>
+</body>
+</html>
