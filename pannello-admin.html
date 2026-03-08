@@ -13,6 +13,7 @@
         :root {
             --cgc-yellow: #fdd835;
             --cgc-red: #e53935;
+            --cgc-blue: #0088cc;
             --bg-black: #000000;
         }
 
@@ -47,13 +48,13 @@
         .logo-main { width: 60px; height: auto; margin-bottom: 5px; }
         .welcome-msg { font-size: 22px; font-weight: 900; text-transform: uppercase; margin: 0; letter-spacing: -1px; }
 
-        /* SEZIONE CONTENUTO: Allineata in alto */
+        /* SEZIONE CONTENUTO */
         .content-section { 
             flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: center; /* Centra solo orizzontalmente */
-            padding: 30px 20px;  /* Spazio sotto l'header */
+            align-items: center; 
+            padding: 30px 20px 120px 20px;
         }
 
         .scanner-box {
@@ -64,22 +65,25 @@
             padding: 30px 20px;
             text-align: center;
             box-shadow: 0 10px 40px rgba(253, 216, 53, 0.15);
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: transform 0.1s;
         }
+        
+        .scanner-box:active { transform: scale(0.98); }
 
         .qr-icon-wrapper {
-            width: 90px;
-            height: 90px;
-            background: var(--cgc-yellow);
-            border-radius: 25px;
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
             margin: 0 auto 15px auto;
-            cursor: pointer;
         }
 
-        .qr-icon-wrapper img { width: 55px; height: 55px; }
-        .scan-label { color: var(--cgc-yellow); font-weight: 900; font-size: 13px; text-transform: uppercase; margin: 0; }
+        .qr-icon-wrapper img { width: 45px; height: 45px; }
+        .scan-label { font-weight: 900; font-size: 13px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
 
         #reader {
             width: 100%;
@@ -87,6 +91,7 @@
             overflow: hidden;
             display: none;
             border: 1px solid #333;
+            margin-bottom: 10px;
         }
 
         /* FOOTER */
@@ -140,16 +145,31 @@
     </div>
 
     <div class="content-section">
-        <div class="scanner-box">
+        
+        <div class="scanner-box" id="box-scanner">
             <div id="reader"></div>
-            
-            <div id="scan-trigger">
-                <div class="qr-icon-wrapper" onclick="iniziaScansione()">
+            <div id="scan-trigger" onclick="iniziaScansione()">
+                <div class="qr-icon-wrapper" style="background: var(--cgc-yellow);">
                     <img src="https://img.icons8.com/ios-filled/100/000000/qr-code.png">
                 </div>
-                <p class="scan-label">CLICCA PER SCANSIONARE</p>
+                <p class="scan-label" style="color: var(--cgc-yellow);">CLICCA PER SCANSIONARE</p>
             </div>
         </div>
+
+        <div class="scanner-box" onclick="location.href='notifiche.html'">
+            <div class="qr-icon-wrapper" style="background: var(--cgc-blue);">
+                <img src="https://img.icons8.com/ios-filled/100/ffffff/paper-plane.png">
+            </div>
+            <p class="scan-label" style="color: var(--cgc-blue);">INVIA NOTIFICHE</p>
+        </div>
+
+        <div class="scanner-box" onclick="location.href='statistiche.html'">
+            <div class="qr-icon-wrapper" style="background: white;">
+                <img src="https://img.icons8.com/ios-filled/100/000000/bar-chart.png">
+            </div>
+            <p class="scan-label" style="color: white;">STATISTICHE</p>
+        </div>
+
     </div>
 
     <div class="footer">
@@ -157,7 +177,7 @@
             <div class="footer-icon-exit">
                 <img src="https://img.icons8.com/ios-filled/50/ffffff/exit.png" style="width:22px;">
             </div>
-            <span class="footer-label-exit">ESCI AL LOGIN</span>
+            <span class="footer-label-exit">ESCI DALL'APP</span>
         </a>
     </div>
 </div>
@@ -188,8 +208,9 @@
             { facingMode: "environment" }, 
             { fps: 10, qrbox: 250 },
             (decodedText) => {
+                // Rilevato codice! Fermiamo lo scanner e carichiamo l'utente
                 html5QrCode.stop().then(() => {
-                    caricaUtente(decodedText);
+                    caricaUtente(decodedText.trim());
                 });
             },
             (errorMessage) => { }
@@ -200,15 +221,19 @@
     }
 
     function caricaUtente(uid) {
+        // Verifichiamo subito l'esistenza su Firebase
         database.ref('utenti/' + uid).once('value').then((snapshot) => {
             if (snapshot.exists()) {
-                const user = snapshot.val();
-                alert("CLIENTE TROVATO: " + user.nome + "\nBollini: " + (user.bollini || 0));
-                resetScanner();
+                // REINDIRIZZAMENTO IMMEDIATO: No alert, si va dritti al profilo
+                window.location.href = "scheda-cliente.html?id=" + uid;
             } else {
-                alert("ERRORE: QR Code non valido.");
+                alert("CLIENTE NON TROVATO: Il codice scansionato non è valido.");
                 resetScanner();
             }
+        }).catch((error) => {
+            console.error(error);
+            alert("Errore di connessione al database.");
+            resetScanner();
         });
     }
 
