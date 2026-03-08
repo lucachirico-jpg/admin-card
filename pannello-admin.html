@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scanner Admin</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    
+    <style>
+        body {
+            margin: 0; padding: 0;
+            background-color: #000;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            height: 100vh; font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        /* Il contenitore dove apparirà il video della fotocamera */
+        #reader {
+            width: 300px;
+            border-radius: 20px;
+            overflow: hidden;
+            display: none; /* Nascosto all'inizio */
+            border: 2px solid #fdd835;
+        }
+
+        .qr-trigger {
+            width: 150px; height: 150px;
+            background-color: #fdd835;
+            border-radius: 40px;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(253, 216, 53, 0.4);
+        }
+
+        .qr-trigger img { width: 80px; height: 80px; }
+
+        .label {
+            color: #fdd835; margin-top: 20px;
+            font-weight: bold; text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="reader"></div>
+
+    <div id="btn-container" style="text-align: center;">
+        <div class="qr-trigger" onclick="iniziaScansione()">
+            <img src="https://img.icons8.com/ios-filled/100/000000/qr-code.png">
+        </div>
+        <div class="label">Tocca per scansionare</div>
+    </div>
+
+    <script>
+        function iniziaScansione() {
+            // Nascondiamo il bottone e mostriamo il riquadro video
+            document.getElementById('btn-container').style.display = 'none';
+            document.getElementById('reader').style.display = 'block';
+
+            const html5QrCode = new Html5Qrcode("reader");
+            
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            // Avvia la fotocamera posteriore (environment)
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config,
+                (decodedText) => {
+                    // COSA SUCCEDE QUANDO LEGGE IL QR:
+                    alert("ID RILEVATO: " + decodedText);
+                    html5QrCode.stop(); // Ferma la camera
+                    location.reload(); // Reset per prova
+                },
+                (errorMessage) => {
+                    // Errore di scansione silenzioso (continua a cercare)
+                }
+            ).catch((err) => {
+                alert("Errore fotocamera: " + err);
+            });
+        }
+    </script>
+</body>
+</html>
