@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>L'idea che ti manca - Auth</title>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    
+    <style>
+        :root {
+            --cgc-yellow: #fdd835;
+            --cgc-red: #e53935;
+            --bg-black: #000000;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-black);
+            background-image: radial-gradient(#222 1px, transparent 1px);
+            background-size: 15px 15px;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .mobile-view {
+            width: 100%;
+            max-width: 414px;
+            height: 100%;
+            background: var(--bg-black);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(180deg, var(--cgc-yellow) 0%, #fbc02d 100%);
+            padding: 15px 20px;
+            text-align: center;
+            border-bottom: 5px solid #000;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        }
+
+        .logo {
+            width: 80px;
+            height: auto;
+            filter: drop-shadow(3px 3px 0px #000);
+        }
+
+        .title {
+            color: #000;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-size: 18px;
+            margin-top: 5px;
+            letter-spacing: -1px;
+        }
+
+        .form-container {
+            padding: 15px 25px;
+            flex-grow: 1;
+        }
+
+        .toggle-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333;
+            transition: .4s; border-radius: 30px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 16px; width: 16px; left: 3px; bottom: 3px;
+            background-color: var(--cgc-yellow);
+            transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--cgc-red); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .input-group { margin-bottom: 12px; }
+        label {
+            display: block;
+            color: #fff;
+            font-size: 10px;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        input {
+            width: 100%;
+            padding: 11px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input:focus { border-color: var(--cgc-yellow); outline: none; }
+
+        .hazard-border {
+            height: 8px;
+            background: repeating-linear-gradient(45deg, #000, #000 10px, var(--cgc-yellow) 10px, var(--cgc-yellow) 20px);
+            border-radius: 4px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--cgc-yellow);
+            color: #000;
+            border: none;
+            padding: 14px;
+            font-size: 18px;
+            font-weight: 900;
+            text-transform: uppercase;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 8px 0;
+            box-shadow: 0 4px 0 #b19717;
+        }
+        .btn-submit:active { transform: translateY(2px); box-shadow: none; }
+    </style>
+</head>
+<body>
+
+<div class="mobile-view">
+    <div class="header">
+        <img src="2025.png" alt="Logo" class="logo">
+        <div class="title">Tessera Fedeltà</div>
+    </div>
+
+    <div class="form-container">
+        <div class="toggle-box">
+            <span>LOGIN</span>
+            <label class="switch">
+                <input type="checkbox" id="mode-switch">
+                <span class="slider"></span>
+            </label>
+            <span>ISCRIZIONE</span>
+        </div>
+
+        <form id="auth-form">
+            <div class="input-group">
+                <label>Nome</label>
+                <input type="text" id="firstname" placeholder="es. Mario" required>
+            </div>
+            
+            <div class="input-group">
+                <label>Cognome</label>
+                <input type="text" id="lastname" placeholder="es. Rossi" required>
+            </div>
+
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <div id="signup-extra" style="display: none;">
+                <div class="input-group">
+                    <label>Email (Opzionale)</label>
+                    <input type="email" id="email" placeholder="esempio@mail.com">
+                </div>
+                <div class="input-group">
+                    <label>Cellulare (Opzionale)</label>
+                    <input type="tel" id="phone" placeholder="333 1234567">
+                </div>
+            </div>
+
+            <div class="hazard-border"></div>
+            <button type="submit" class="btn-submit" id="main-btn">Entra</button>
+            <div class="hazard-border"></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Configurazione Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyCOQzqZrGbyVsQLyiF6d9C_ZkTkKPo6rew",
+        authDomain: "tesserafedelta-afe51.firebaseapp.com",
+        databaseURL: "https://tesserafedelta-afe51-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "tesserafedelta-afe51",
+        storageBucket: "tesserafedelta-afe51.firebasestorage.app",
+        messagingSenderId: "277445209812",
+        appId: "1:277445209812:web:d0e4207692ba09973fd541"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const modeSwitch = document.getElementById('mode-switch');
+    const signupExtra = document.getElementById('signup-extra');
+    const mainBtn = document.getElementById('main-btn');
+
+    modeSwitch.addEventListener('change', () => {
+        if(modeSwitch.checked) {
+            signupExtra.style.display = 'block';
+            mainBtn.innerText = 'Registrati';
+        } else {
+            signupExtra.style.display = 'none';
+            mainBtn.innerText = 'Entra';
+        }
+    });
+
+    document.getElementById('auth-form').onsubmit = function(e) {
+        e.preventDefault();
+        
+        const nome = document.getElementById('firstname').value.trim();
+        const cognome = document.getElementById('lastname').value.trim();
+        const pass = document.getElementById('password').value.trim();
+
+        if (modeSwitch.checked) {
+            // --- AZIONE: REGISTRAZIONE ---
+            const email = document.getElementById('email').value.trim();
+            const cell = document.getElementById('phone').value.trim();
+            const newUID = "user_" + Date.now();
+
+            const oggi = new Date();
+            const dataStringa = oggi.getFullYear() + 
+                String(oggi.getMonth() + 1).padStart(2, '0') + 
+                String(oggi.getDate()).padStart(2, '0');
+
+            database.ref('config/ultimo_numero').transaction((corrente) => {
+                return (corrente || 0) + 1;
+            }, (error, committed, snapshot) => {
+                if (committed) {
+                    const progressivo = snapshot.val();
+                    const numeroPad = String(progressivo).padStart(4, '0');
+                    const codiceTessera = dataStringa + "-" + numeroPad;
+
+                    database.ref('utenti/' + newUID).set({
+                        nome: nome,
+                        cognome: cognome,
+                        password: pass,
+                        email: email,
+                        cellulare: cell,
+                        bollini: 0,
+                        numero_tessera: codiceTessera,
+                        data_iscrizione: oggi.toLocaleDateString()
+                    }).then(() => {
+                        alert("Registrazione completata!\nLa tua tessera è: " + codiceTessera + "\nOra effettua il login.");
+                        modeSwitch.checked = false;
+                        signupExtra.style.display = 'none';
+                        mainBtn.innerText = 'Entra';
+                    }).catch(err => alert("Errore salvataggio: " + err.message));
+                } else {
+                    alert("Errore nel generare il numero tessera. Riprova.");
+                }
+            });
+
+        } else {
+            // --- AZIONE: LOGIN ---
+            database.ref('utenti').once('value').then((snapshot) => {
+                let userFound = null;
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    if (data.nome.toLowerCase() === nome.toLowerCase() && 
+                        data.cognome.toLowerCase() === cognome.toLowerCase() && 
+                        data.password === pass) {
+                        userFound = childSnapshot.key;
+                    }
+                });
+
+                if (userFound) {
+                    // 1. Salvataggio locale per persistenza
+                    localStorage.setItem('loggedUserUID', userFound);
+
+                    // 2. Offuscamento ID per l'URL (Base64)
+                    const encodedUID = btoa(userFound);
+
+                    // 3. Reindirizzamento con parametro offuscato
+                    window.location.href = "home.html?u=" + encodedUID;
+                } else {
+                    alert("Dati non corretti. Controlla Nome, Cognome e Password.");
+                }
+            });
+        }
+    };
+</script>
+
+</body>
+</html>
